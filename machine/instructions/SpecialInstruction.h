@@ -119,5 +119,9 @@ struct NoOp : public Hardware::Instruction {
     inline void run() {}
 };
 
+struct Sync : public Hardware::Instruction {
+    inline void run() {}
+}; // needs impl when making multi-core systems
+
 
 #endif

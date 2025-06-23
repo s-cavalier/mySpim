@@ -43,10 +43,12 @@ void Hardware::Machine::loadKernel(const ExternalInfo::KernelBootInformation& ke
     trapEntry = kernelInfo.trapEntry;
     Word at = kernelInfo.textStart;
 
+
     for (const auto& instr : kernelInfo.text) {
         RAM.setWord(at, instr);
         at += 4;
     }
+
 
     at = kernelInfo.dataStart;
     for (const auto& byte : kernelInfo.data) {
@@ -55,14 +57,17 @@ void Hardware::Machine::loadKernel(const ExternalInfo::KernelBootInformation& ke
     }
 
     RAM.setWord(kernelInfo.argc, kernelArgs.size());
-
+    
     for (Word i = 0; i < kernelArgs.size(); ++i) {
         Word indirectPtr = kernelInfo.argv + 64 * i;    // argv[i] = *(argv + i)
         for (Word j = 0; j < kernelArgs[i].size(); ++j) RAM.setByte(indirectPtr + j, kernelArgs[i][j]); // argv[i][j]
     }
 
+
     cpu.accessProgramCounter() = kernelInfo.bootEntry;
     coprocessors[0]->accessRegister(Binary::STATUS).ui = 0b10;  // enable exl at boot <- has to be done by hardware
+
+    
 
 }
 

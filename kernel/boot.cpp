@@ -1,5 +1,7 @@
 #include "HeapManager.h"
 #include "Process.h"
+#include "VirtualMemory.h"
+
 // --- These should be the first includes, especially HeapManager so everything after is correctly linked with the new operator
 
 #include "kstl/File.h"
@@ -34,17 +36,15 @@ void call_global_constructors() {
     }
 }
 
-kernel::PCB* userprog;
+kernel::KernelPageTable kpt;
 
 extern "C" void cppmain() {
     // just eret assuming that EPC already has the right PC loaded
     call_global_constructors();
     PrintString("Kernel booted!\n");
 
-    bool fromSpim = (argc > 1 && ministl::streq(argv[1], "-spim"));
 
-    userprog = new kernel::PCB(argv[0], fromSpim);
-    userprog->run();
+    
 
     return; // this return kills the system, so hopefully it doesn't run
 }

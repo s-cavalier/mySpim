@@ -28,6 +28,4 @@ inline void assert_fail(const char* cond, const char* file, int line, const char
 inline void* operator new(size_t, void* ptr) { return ptr; }
 
 
-
-
 #endif

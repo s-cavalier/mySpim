@@ -9,7 +9,9 @@ namespace Hardware {
         enum ExceptionCode : unsigned char {
             INTERRUPT = 0,   // Interrupt (hardware)
 
-            // no TLB
+            TLB_MOD = 1,
+            TLB_MISS_L = 2,
+            TLB_MISS_S = 3,
 
             ADDRL = 4,   // Address error on load or fetch
             ADDRS = 5,   // Address error on store

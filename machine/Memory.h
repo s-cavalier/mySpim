@@ -1,58 +1,100 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 #include <unordered_map>
+#include <memory>
 
 using Byte = unsigned char;
 using HalfWord = unsigned short;
 using Word = unsigned int;
 
 #define PAGE_SIZE 4096UL
-#define PHYS_MEM_SIZE 268435456ULL
+#define PHYS_MEM_SIZE 268435456UL
+#define TLB_SIZE 32
 
 namespace Hardware {
 
-    class Memory {
-        std::unordered_map<Word, char> RAM;
-    
+    class TLBEntry {
+        Word entryHi;
+        Word entryLo;
+
+        static Word constexpr VPN_MASK = 0x7FFFF << 13;
+        static Word constexpr G_MASK = 1 << 12;         //global
+        static Word constexpr R_MASK = 1 << 11;         //read
+        static Word constexpr W_MASK = 1 << 10;         //write
+        static Word constexpr X_MASK = 1 << 9;          //execute
+        static Word constexpr ASID_MASK = 0xFF;
+        static Word constexpr PFN_MASK = 0xFFFFFF << 6;
+        static Word constexpr C_MASK = 7 << 3;          //coherence
+        static Word constexpr D_MASK = 1 << 2;          //dirty
+        static Word constexpr V_MASK = 1 << 1;          //valid
+        
     public:
-        class Iterator {
-            std::unordered_map<Word, char>::const_iterator it;
-
-        public:
-            using value_type = const std::pair<const Word, char>;
-            using reference = value_type&;
-            using pointer = value_type*;
-            using difference_type = std::ptrdiff_t;
-            using iterator_category = std::forward_iterator_tag;
-
-            Iterator(const std::unordered_map<Word, char>::const_iterator& src);
-            ~Iterator();
-
-            reference operator*() const;
-            pointer   operator->() const;
-
-            Iterator& operator++();
-            Iterator operator++(int);
-
-            bool operator==(const Iterator& other) const;
-            bool operator!=(const Iterator& other) const;
+        enum AccessType : Byte {
+            READ = 0,
+            WRITE = 1,
+            EXECUTE = 2
         };
 
-        struct boundRegisters {
-            Word textBound;
-            Word staticBound;
-            Word dynamicBound;
-            Word stackBound;
-        };
+        TLBEntry() = default;
+        TLBEntry(const Word& entryHi, const Word& entryLo) : entryHi(entryHi), entryLo(entryLo) {}
 
-        boundRegisters memoryBounds;
+        Word VPN() const;
+        void setVPN(const Word& vpn);
+        bool global() const;
+        void setGlobal(bool g);
+        bool read() const;
+        void setRead(bool r);
+        bool write() const;
+        void setWrite(bool w);
+        bool execute() const;
+        void setExecute(bool x);
+        Byte ASID() const;
+        void setASID(Byte asid);
+        Word PFN() const;
+        void setPFN(const Word& pfn);
+        Byte coherence() const;
+        void setCoherence(Byte c);
+        bool dirty() const;
+        void setDirty(bool d);
+        bool valid() const;
+        void setValid(bool v);
 
-        Iterator begin() const;
-        Iterator end() const;
+        bool permits(AccessType access) const;
 
+        Word& accessHiRaw();
+        Word& accessLoRaw();
+        const Word& readHiRaw() const;
+        const Word& readLoRaw() const;
+    };
+
+    class TLB {
+        TLBEntry entries[TLB_SIZE];
+
+    public:
+
+        TLB() : entries{} {};
+        TLBEntry translate(const Word& vaddr, TLBEntry::AccessType access) const;   // returns nullptr on TLB miss
+        void insert(const Word& index, const TLBEntry& tlbEntry);
+        void insertRandom(const TLBEntry& tlbEntry);
+        void flush();
+
+        TLBEntry& operator[](const Word& idx);
+        TLBEntry& at(const Word& idx);
+        const TLBEntry& at(const Word& idx) const;
+    };
+
+
+    class Memory {
+        std::unique_ptr<Byte[]> physicalMemory;
+        TLB tlb;
+        Word runTLB(const Word& addr, TLBEntry::AccessType access) const;
+
+    public:
         Memory();
-        Memory(const boundRegisters& bounds);
 
+        TLB& accessTLB();
+        const TLB& readTLB() const;
+    
         Word getWord(const Word& addr) const;
         HalfWord getHalfWord(const Word& addr) const;
         Byte getByte(const Word& addr) const;
@@ -66,9 +108,6 @@ namespace Hardware {
 
         void setSingle(const Word& addr, const float& single);
         void setDouble(const Word& addr, const double& dble);
-    };
-
-    class VirtualMemory {
 
     };
 

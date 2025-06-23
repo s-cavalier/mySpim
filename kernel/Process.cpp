@@ -3,24 +3,6 @@
 #include "kstl/File.h"
 #include "kstl/Elf.h"
 
-extern "C" char _end[];
-
-kernel::MemoryManager::MemoryManager() {
-    kernelReservedBoundary = ((size_t(_end) - 0x80000000) + PAGE_SIZE - 1) / PAGE_SIZE; // round up to closet page boundary in kernel image
-}
-
-size_t kernel::MemoryManager::reserveFreeFrame() {
-    size_t frame = size_t(-1);
-    for (size_t i = kernelReservedBoundary; i < freePages.size(); ++i) {
-        if (freePages[i]) continue; // reserved if bit[i] == 1
-        frame = i;
-        break;
-    }
-
-    assert(frame != size_t(-1)); // ran out of pages
-}
-
-
 extern "C" void run_process(kernel::TrapFrame& trapFrame);
 
 kernel::PCB::PCB(const char* binaryFile, bool fromSpim) : PID(1), state(READY) {
